@@ -29,7 +29,7 @@
            true
            false)) tokens))
 
-(def *operators* ["()" "*/" "+-"])
+(def *operators* [")" "*/" "+-","("])
 
 (defn find-in-operators [op]
   (let [results (map (fn[string] (> (.indexOf string (str op)) -1)))
@@ -45,19 +45,46 @@
           (> op1-pos op2-pos) 1
           :else -1)))
 
-(defn prefix-valid [tokens]
-  (infix is a buffer)
-  (for all tokens
-    (if is an operator
-      push token the stack
-     otherwise
-      put the token in the infix collection
-      
-  )
+(defn create-expression [op ch1 ch2]
+  (["(", op, ch1, ch2, ")"]))
+
+(defn pop-until [val stack result]
+  (let [top-el (peek stack)
+        n (-2 (count result))]
+    (if (= top-el val)
+      [stack result]
+      (pop-until val (pop stack) (conj (take n result) 
+                                        (create-expression top-el (first (rest result))
+                                                           (first (rest (rest result)))))))))
+
+
+(defn prefix-valid [tokens result [& {:keys [op-stack] :or {op-stack []}}]]
+  (if (and (empty? tokens) (not (empty? op-stack)))
+    (let[newstack-op (pop op-stack)
+         top-el (peek op-stack)
+         expression (create-expression top-el (first (rest result)) (first (rest (rest result))))]
+      (prefix-valid tokens expression newstack-op))
+	  (let [token (first tokens)]
+	    (if (is-alpha? token)
+	      (prefix-valid (rest tokens) (conj result token) op-stack)
+	      (if (is-operator? token)
+	        (if (or (empty? op-stack) (= token "(")) 
+	          (prefix-valid (rest tokens) result (into [token] op-stack))
+	          (if (= token ")")
+	            (let [[newstack-op  new-result](pop-until "(" op-stack result)]
+	            (prefix-valid (rest tokens) new-result newstack-op))
+	            (if (= (precedence? token (peek op-stack)) -1)
+	              (let [newstack-op (pop op-stack)
+	                    top-el (peek op-stack)
+	                    expression (create-expression top-el (first (rest result)) (first (rest (rest result))))]
+	                (prefix-valid (rest tokens) expression newstack-op))
+	              (if (= (precedence? token (peek op-stack)) 1)
+	                (prefix-valid (rest tokens) result (into [token] op-stack))
+	                nil)))))))))
 
 (defn prefix-of [tokens]
   (if (is-valid tokens)
-    (prefix-valid tokens)
+    (prefix-valid tokens [])
     (throw (Exception. (format ("Expression %s is invalid", (join " " tokens)))))))
 
 (defn to-prefix [infix-exp]
